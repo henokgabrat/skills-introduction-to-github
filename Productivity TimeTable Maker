@@ -1,0 +1,117 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": [],
+      "toc_visible": true,
+      "authorship_tag": "ABX9TyPV4Io4oYaSaeNAsnaC+T67",
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/henokgabrat/skills-introduction-to-github/blob/main/Productivity%20TimeTable%20Maker\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "cfmW_hoaI7Kc"
+      },
+      "outputs": [],
+      "source": [
+        "import pandas as pd\n",
+        "from datetime import datetime, timedelta\n",
+        "\n",
+        "# Your AI Agent\n",
+        "def create_timetable(tasks, durations, deadlines, work_start=\"09:00\", work_end=\"17:00\"):\n",
+        "    # Convert times to minutes for math\n",
+        "    start_hour, start_min = map(int, work_start.split(\":\"))\n",
+        "    end_hour, end_min = map(int, work_end.split(\":\"))\n",
+        "    day_start = start_hour * 60 + start_min  # e.g., 9:00 = 540 min\n",
+        "    day_end = end_hour * 60 + end_min       # e.g., 17:00 = 1020 min\n",
+        "    work_day = day_end - day_start          # 480 min (8 hours)\n",
+        "\n",
+        "    # Week setup: Monday to Sunday\n",
+        "    week_start = datetime(2025, 3, 10, 0, 0)  # Next Monday after HS2 week\n",
+        "    days = [\"Monday\", \"Tuesday\", \"Wednesday\", \"Thursday\", \"Friday\", \"Saturday\", \"Sunday\"]\n",
+        "    timetable = {day: [] for day in days}\n",
+        "\n",
+        "    # Sort tasks by deadline (earliest first)\n",
+        "    task_list = list(zip(tasks, durations, deadlines))\n",
+        "    task_list.sort(key=lambda x: x[2])  # Sort by deadline\n",
+        "\n",
+        "    # Fill the week\n",
+        "    current_day = 0  # Monday = 0, Sunday = 6\n",
+        "    current_time = day_start  # Start at 9:00\n",
+        "\n",
+        "    for task, duration, deadline in task_list:\n",
+        "        duration = int(duration * 60)  # Convert hours to minutes\n",
+        "        deadline_day = datetime.strptime(deadline, \"%A\").weekday()  # e.g., \"Wednesday\" = 2\n",
+        "\n",
+        "        # Find a slot before deadline\n",
+        "        while duration > 0 and current_day <= deadline_day:\n",
+        "            day_name = days[current_day]\n",
+        "            time_left = min(work_day - (current_time - day_start), duration)  # Fit into day\n",
+        "\n",
+        "            if time_left > 0:\n",
+        "                start_h, start_m = divmod(current_time, 60)\n",
+        "                end_time = current_time + time_left\n",
+        "                end_h, end_m = divmod(end_time, 60)\n",
+        "                slot = f\"{start_h:02d}:{start_m:02d}-{end_h:02d}:{end_m:02d} - {task}\"\n",
+        "                timetable[day_name].append(slot)\n",
+        "                duration -= time_left\n",
+        "                current_time += time_left\n",
+        "\n",
+        "            # Next day or break\n",
+        "            if current_time >= day_end or duration > 0:\n",
+        "                current_day += 1\n",
+        "                current_time = day_start\n",
+        "                if current_day < len(days):  # Add break if not done\n",
+        "                    timetable[days[current_day]].append(f\"{start_h:02d}:{start_m:02d}-{(start_h+1):02d}:{start_m:02d} - Break\")\n",
+        "\n",
+        "    # Clear output\n",
+        "    report = \"Your Weekly Timetable (March 10-16, 2025)\\n\\n\"\n",
+        "    for day in days:\n",
+        "        report += f\"{day}:\\n\"\n",
+        "        if timetable[day]:\n",
+        "            for slot in timetable[day]:\n",
+        "                report += f\"  {slot}\\n\"\n",
+        "        else:\n",
+        "            report += \"  Free day!\\n\"\n",
+        "\n",
+        "    print(report)\n",
+        "    # Save to CSV\n",
+        "    csv_data = []\n",
+        "    for day, slots in timetable.items():\n",
+        "        for slot in slots:\n",
+        "            time, task = slot.split(\" - \")\n",
+        "            start, end = time.split(\"-\")\n",
+        "            csv_data.append([day, start, end, task])\n",
+        "    df = pd.DataFrame(csv_data, columns=[\"Day\", \"Start\", \"End\", \"Task\"])\n",
+        "    df.to_csv(\"weekly_timetable.csv\", index=False)\n",
+        "\n",
+        "# Test it with sample tasks\n",
+        "tasks = [\"Finish report\", \"Call Sarah\", \"Plan meeting\", \"Write pitch\"]\n",
+        "durations = [2, 1, 1.5, 2]  # Hours\n",
+        "deadlines = [\"Wednesday\", \"Tuesday\", \"Friday\", \"Thursday\"]  # Days of week\n",
+        "create_timetable(tasks, durations, deadlines)"
+      ]
+    }
+  ]
+}
